@@ -1,0 +1,223 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no, width=device-width">
+    <title>poiTest</title>
+    <link rel="stylesheet" href="css/demo-center.css"/>
+    <style>
+        html, body, #container {
+            height: 100%;
+            width: 100%;
+        }
+
+        .amap-icon img,
+        .amap-marker-content img{
+            width: 25px;
+            height: 34px;
+        }
+
+        .marker {
+            position: absolute;
+            top: -20px;
+            right: -118px;
+            color: #fff;
+            padding: 4px 10px;
+            box-shadow: 1px 1px 1px rgba(10, 10, 10, .2);
+            white-space: nowrap;
+            font-size: 12px;
+            font-family: "";
+            background-color: #25A5F7;
+            border-radius: 3px;
+        }
+
+        .input-card{
+            width: 25rem;
+            z-index: 170;
+        }
+
+        .input-card .btn{
+            margin-right: .8rem;
+        }
+
+        .input-card .btn:last-child{
+            margin-right: 0;
+        }
+    </style>
+</head>
+<body>
+<div id="container"></div>
+<script type="text/javascript"
+        src="https://webapi.amap.com/maps?v=1.4.15&key=30510e3d5fe9f7eebf49794a8eb8bdb0">          
+</script>
+<div class="info" id="text">
+    站点信息增强
+</div>
+<div  class="stationsearch">
+        <input  type="text" placeholder="请输入局站信息进行查询" name="" id="searchValue" value="" />
+        <button id="query"><i>查询局站</i></button>
+</div>
+<div class="poisearch">
+        <input   type="text" placeholder="请输入POI信息进行查询" name="" id="poisearchValue" value="" />
+        <button id="poiquery"><i>查询POI</i></button>
+</div>
+<div class="input-card">
+    <h4>poiTest</h4>
+    <div class="input-item">
+        <input type="file" class="btn" onchange="upload(this)" value="加载轮廓信息"/>  
+    </div>
+</div>
+<script type="text/javascript">
+
+    var map = new AMap.Map("container", {
+        zoom: 13,
+        center: [121.534268,31.316402],
+        resizeEnable: true
+    });         
+
+    function upload(input) {  
+        //支持chrome IE10  
+        if (window.FileReader) {  
+            var file = input.files[0];  
+            filename = file.name.split(".")[0];  
+            var reader = new FileReader();  
+            reader.onload = function() {  
+                var json = JSON.parse(this.result);
+                for(var i=0;i<json.length;i++){
+                    console.log(json[i].id);
+             //       addMarker(json[i].lon,json[i].lat)
+                    LngLatArry = json[i].border.split('_')
+                    var polygonPath = []
+                    for (var index=0;index<LngLatArry.length;index++){
+                        lng = LngLatArry[index].split(',')[0]
+                        lat = LngLatArry[index].split(',')[1]
+                        polygonPath.push(new AMap.LngLat(lng,lat))
+                        
+                    }
+                    if(json[i].type.indexOf("住宅区") != -1){
+                        extdt = [json[i].name,json[i].includeStation,json[i].isIncluded]
+
+
+                        if(json[i].isIncluded.indexOf("yes") != -1){
+                            var polygon = new AMap.Polygon({
+                            path: polygonPath,
+                            strokeOpacity:0.5,
+                            fillColor:"#33FF66",  
+                            strokeColor: "#000000",
+                            strokeWeight: 1,
+                            fillOpacity:0.5,
+                            extData:extdt
+                            });
+
+                        }
+                        else{
+                            var polygon = new AMap.Polygon({
+                            path: polygonPath,
+                            strokeOpacity:0.5,
+                            fillColor:"#CCCCCC",  
+                            strokeColor: "#F33",
+                            strokeWeight: 1,
+                            fillOpacity:0.5,
+                            extData:extdt
+
+                            });
+                        }
+                        
+                    }                           
+                    else{
+                        continue;
+                    }
+
+
+                    polygon.on('click', callbacktest);
+                    map.add(polygon);
+
+                }
+          //      console.log(this.result);  
+            }  
+            reader.readAsText(file);  
+        }   
+        //支持IE 7 8 9 10  
+        else if (typeof window.ActiveXObject != 'undefined'){  
+            var xmlDoc;   
+            xmlDoc = new ActiveXObject("Microsoft.XMLDOM");   
+            xmlDoc.async = false;   
+            xmlDoc.load(input.value);   
+            console.log(xmlDoc.xml);   
+        }   
+        //支持FF  
+        else if (document.implementation && document.implementation.createDocument) {   
+            var xmlDoc;   
+            xmlDoc = document.implementation.createDocument("", "", null);   
+            xmlDoc.async = false;   
+            xmlDoc.load(input.value);   
+            console.log(xmlDoc.xml);  
+        } else {   
+            alert('error');   
+        }   
+    }  
+
+    function callbacktest(){
+   
+        var text = this.getExtData()[0];
+        document.querySelector("#text").innerText = text;
+    }   
+
+    document.querySelector("#query").onclick = function() {
+        keyword = document.querySelector("#searchValue").value;
+        allpolygonlist = map.getAllOverlays()
+        for(i=0;i<allpolygonlist.length;i++) {
+            if (allpolygonlist[i].getExtData()[1] == keyword){
+                allpolygonlist[i].setOptions({fillColor:"#4169E1"}); 
+
+            }
+            else if(allpolygonlist[i].getExtData()[2].indexOf("yes") != -1 ) {
+
+                color = allpolygonlist[i].getOptions().fillColor;
+                if(color != "#33FF66")
+                allpolygonlist[i].setOptions({fillColor:"#33FF66"});
+                    
+            }
+            else{
+                color = allpolygonlist[i].getOptions().fillColor;
+                if(color != "#CCCCCC")
+                allpolygonlist[i].setOptions({fillColor:"#CCCCCC"});
+            }
+                
+
+        }
+            
+    }
+
+    document.querySelector("#poiquery").onclick = function() {
+        keyword = document.querySelector("#poisearchValue").value;
+        allpolygonlist = map.getAllOverlays()
+        for(i=0;i<allpolygonlist.length;i++) {
+            if (allpolygonlist[i].getExtData()[0].indexOf(keyword) != -1 && keyword.length!=0){
+                allpolygonlist[i].setOptions({fillColor:"#4169E1"}); 
+
+            }
+            else if(allpolygonlist[i].getExtData()[2].indexOf("yes") != -1 ) {
+
+                color = allpolygonlist[i].getOptions().fillColor;
+                if(color != "#33FF66")
+                allpolygonlist[i].setOptions({fillColor:"#33FF66"});
+                    
+            }
+            else{
+                color = allpolygonlist[i].getOptions().fillColor;
+                if(color != "#CCCCCC")
+                allpolygonlist[i].setOptions({fillColor:"#CCCCCC"});
+            }
+                
+
+        }
+            
+    }
+
+   
+    
+</script>
+</body>
+</html>
